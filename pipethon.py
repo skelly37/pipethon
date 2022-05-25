@@ -108,7 +108,7 @@ class Pipe:
 			try:
 				fifo = open(self.path, 'r')
 				response = fifo.read().strip()
-			except FilenotFoundError:
+			except FileNotFoundError:
 				raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
 
 		if len(response)>0:
