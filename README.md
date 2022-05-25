@@ -1,6 +1,10 @@
 # Pipethon
 ***Named pipe in Python3 for Linux, Windows and MacOS***
 
+## Requirements:
+- pywin32: 
+  - `$ pip install pywin32` — named pipes for Windows
+
 ## Docs
 - class **`Pipe`**
   - static variables:

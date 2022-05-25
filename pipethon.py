@@ -3,9 +3,7 @@ from sys import argv, platform as PLATFORM
 import concurrent.futures
 
 if PLATFORM == "win32" or PLATFORM == "cygwin":
-	pass
-	#TODO import windows-python api
-
+	import win32pipe, win32file
 
 #sample values to be replaced
 APP_NAME: str = "Pipethon"
