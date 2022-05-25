@@ -37,8 +37,7 @@ class Pipe:
 	def __generate_filename(self) -> str:
 		prefix: str = ""
 		if self.__platform == "win32" or self.__platform == "cygwin":
-			pass
-			#TODO windows %TEMP%
+			prefix = os.getenv("TEMP") + "\\"
 		else:
 			prefix = "/tmp/"
 		

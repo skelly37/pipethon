@@ -2,7 +2,7 @@
 ***Named pipe in Python3 for Linux, Windows and MacOS***
 
 ## Requirements:
-- pywin32: 
+- [pywin32](https://github.com/mhammond/pywin32): 
   - `$ pip install pywin32` — named pipes for Windows
 
 ## Docs
