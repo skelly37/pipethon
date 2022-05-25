@@ -31,7 +31,8 @@ class Pipe:
 					self.__create_pipe()
 		else:
 			self.__create_pipe()
-		
+
+
 	def __pipe_exists(self) -> bool:
 		return os.path.exists(self.path)
 
@@ -60,25 +61,21 @@ class Pipe:
 	def __create_unix_pipe(self) -> None:
 		os.mkfifo(self.path)
 
+
 	def send_to_pipe(self, message: str, timeout_secs: float = 1.5) -> bool:
-		if self.__pipe_exists():
-			if self.__platform == "win32" or self.__platform == "cygwin":
-				return self.__send_to_win_pipe(message, timeout_secs)
-			else:
-				return self.__send_to_unix_pipe(message, timeout_secs)
+		if self.__platform == "win32" or self.__platform == "cygwin":
+			return self.__send_to_win_pipe(message, timeout_secs)
 		else:
-			raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
+			return self.__send_to_unix_pipe(message, timeout_secs)
 
 	def __send_to_win_pipe(self, message: str, timeout_secs: float) -> bool:
 		pass
 		#TODO
 
-
 	def __unix_sender(self, message: str) -> bool:
-		with open(self.path, 'w') as fifo:
+		with open(self.path, 'a') as fifo:
 			fifo.write(message)
 		return True
-
 
 	def __send_to_unix_pipe(self, message: str, timeout_secs: float) -> bool:
 		__pool = concurrent.futures.ThreadPoolExecutor()
@@ -94,14 +91,12 @@ class Pipe:
 
 		return False
 
+
 	def read_from_pipe(self, timeout_secs: float = 1.5) -> str:
-		if self.__pipe_exists():
-			if self.__platform == "win32" or self.__platform == "cygwin":
-				return self.__read_from_win_pipe(timeout_secs)
-			else:
-				return self.__read_from_unix_pipe(timeout_secs)
+		if self.__platform == "win32" or self.__platform == "cygwin":
+			return self.__read_from_win_pipe(timeout_secs)
 		else:
-			raise FileNotFoundError("FIFO doesn't exist")
+			return self.__read_from_unix_pipe(timeout_secs)
 
 	def __read_from_win_pipe(self, timeout_secs: float) -> str:
 		pass
@@ -110,8 +105,11 @@ class Pipe:
 	def __unix_reader(self) -> str:
 		response: str = ""
 		while len(response)==0:
-			fifo = open(self.path, 'r')
-			response = fifo.read().strip()
+			try:
+				fifo = open(self.path, 'r')
+				response = fifo.read().strip()
+			except FilenotFoundError:
+				raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
 
 		if len(response)>0:
 			return response
@@ -132,4 +130,9 @@ class Pipe:
 
 		return Pipe.NO_RESPONSE_MESSAGE
 
+
 #TODO create win pipe (and import its module)
+p = Pipe(APP_NAME, VERSION, argv[1:])
+print(p.read_from_pipe())
+print(p.is_pipe_owner)
+print(p.send_to_pipe("anything"))
