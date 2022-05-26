@@ -4,6 +4,7 @@ import concurrent.futures
 
 if PLATFORM == "win32" or PLATFORM == "cygwin":
 	import win32pipe, win32file
+	PLATFORM = "windows"
 
 #sample values to be replaced
 APP_NAME: str = "Pipethon"
@@ -30,21 +31,26 @@ class Pipe:
 		else:
 			self.__create_pipe()
 
+		if self.__platform == "windows" and self.is_pipe_owner:
+			pass
+			#TODO windows pipe handle needed
+
 
 	def __pipe_exists(self) -> bool:
 		return os.path.exists(self.path)
 
 	def __generate_filename(self) -> str:
 		prefix: str = ""
-		if self.__platform == "win32" or self.__platform == "cygwin":
-			prefix = os.getenv("TEMP") + "\\"
+		username: str = os.getlogin()
+		if self.__platform == "windows":
+			prefix = "\\\\.\\pipe\\"
 		else:
 			prefix = "/tmp/"
 		
-		return f"{prefix}{self.__app_name}_v{self.__app_version}_pipe_file"
+		return f"{prefix}{self.__app_name}_v{self.__app_version}_{username}_pipe_file"
 
 	def __create_pipe(self) -> None:
-		if self.__platform == "win32" or self.__platform == "cygwin":
+		if self.__platform == "windows":
 			self.__create_win_pipe()
 		else:
 			self.__create_unix_pipe()
@@ -52,15 +58,17 @@ class Pipe:
 		self.is_pipe_owner = True
 
 	def __create_win_pipe(self) -> None:
-		pass
-		#TODO
+		self.__windows_writer_handler = win32pipe.CreateNamedPipe(self.path,
+									  win32pipe.PIPE_ACCESS_DUPLEX,
+									  win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_WAIT,
+									  1, 65536, 65536, 300, None)
 
 	def __create_unix_pipe(self) -> None:
 		os.mkfifo(self.path)
 
 
 	def send_to_pipe(self, message: str, timeout_secs: float = 1.5) -> bool:
-		if self.__platform == "win32" or self.__platform == "cygwin":
+		if self.__platform == "windows":
 			return self.__send_to_win_pipe(message, timeout_secs)
 		else:
 			return self.__send_to_unix_pipe(message, timeout_secs)
@@ -90,7 +98,7 @@ class Pipe:
 
 
 	def read_from_pipe(self, timeout_secs: float = 1.5) -> str:
-		if self.__platform == "win32" or self.__platform == "cygwin":
+		if self.__platform == "windows":
 			return self.__read_from_win_pipe(timeout_secs)
 		else:
 			return self.__read_from_unix_pipe(timeout_secs)
@@ -126,7 +134,6 @@ class Pipe:
 				fifo.write("kill the reader\n")
 
 		return Pipe.NO_RESPONSE_MESSAGE
-
 
 #TODO create win pipe (and import its module)
 p = Pipe(APP_NAME, VERSION, argv[1:])
