@@ -24,17 +24,19 @@ class Pipe:
 
 		self.is_pipe_owner: bool = False
 
+
 		if self.__platform == "windows":
 			for arg in args:
 				if not self.send_to_pipe(arg):
 					self.is_pipe_owner = True
-			#TODO generate read handler if Pipe is the actual pipe owner
+					break
 		else:
 			if self.__pipe_exists():
 				for arg in args:
 					if not self.send_to_pipe(arg):
 						os.unlink(self.path)
 						self.__create_unix_pipe()
+						break
 			else:
 				self.__create_unix_pipe()
 
@@ -92,21 +94,7 @@ class Pipe:
 				return True
 		except concurrent.futures._base.TimeoutError:
 			#hacky way to kill the sender
-
-			if self.__platform == "windows":
-				read_handle = win32file.CreateFile(
-					self.path,
-					win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-					0,
-					None,
-					win32file.OPEN_EXISTING,
-					0,
-					None
-				)
-				win32file.ReadFile(read_handle, 64*1024)
-			else:
-				with open(self.path, 'r') as fifo:
-					fifo.read()
+			self.read_from_pipe()
 
 		return False
 
@@ -187,11 +175,10 @@ class Pipe:
 
 		return Pipe.NO_RESPONSE_MESSAGE
 
-
-#TODO go through the code and find anything to improve
-
+"""
+Example usage:
 
 p = Pipe(APP_NAME, VERSION, argv[1:])
-#print(p.read_from_pipe())
 print(p.is_pipe_owner)
 print(p.send_to_pipe("anything"))
+"""
