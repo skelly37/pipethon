@@ -4,6 +4,7 @@ import concurrent.futures
 
 if PLATFORM == "win32" or PLATFORM == "cygwin":
 	import win32pipe, win32file
+	from pywintypes import error as WinApiError
 	PLATFORM = "windows"
 
 #sample values to be replaced
@@ -116,9 +117,48 @@ class Pipe:
 		else:
 			return self.__read_from_unix_pipe(timeout_secs)
 
+	def __win_reader(self) -> str:
+		response: str = ""
+
+		try:
+			pipe = win32file.CreateFile(
+				self.path,
+				win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+				0,
+				None,
+				win32file.OPEN_EXISTING,
+				0,
+				None
+			)
+			while len(response)==0:
+				response = win32file.ReadFile(pipe, 64*1024)
+
+		except WinApiError as err:
+			if err.args[0] == 2:
+				raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
+			elif e.args[0] == 109:
+				raise FileNotFoundError("Pipe is broken")
+			else:
+				raise FileNotFoundError(f"{e.args[0]}; {e.args[1]}; {e.args[2]}")
+
+
+		if len(response)>0:
+			return response
+		else:
+			return Pipe.NO_RESPONSE_MESSAGE
+
 	def __read_from_win_pipe(self, timeout_secs: float) -> str:
-		pass
-		#TODO
+		__pool = concurrent.futures.ThreadPoolExecutor()
+		reader = __pool.submit(self.__win_reader)
+
+		try:
+			if reader.result(timeout=timeout_secs):
+				return reader.result()
+		except concurrent.futures._base.TimeoutError:
+			# hacky way to kill the file-opening loop
+			self.send_to_pipe("kill the reader\n")
+
+		return Pipe.NO_RESPONSE_MESSAGE
 
 	def __unix_reader(self) -> str:
 		response: str = ""
@@ -143,15 +183,12 @@ class Pipe:
 				return reader.result()
 		except concurrent.futures._base.TimeoutError:
 			#hacky way to kill the file-opening loop
-			with open(self.path, 'a') as fifo:
-				fifo.write("kill the reader\n")
+			self.send_to_pipe("kill the reader\n")
 
 		return Pipe.NO_RESPONSE_MESSAGE
 
 
-#TODO create windows reader and handler (if the class actually owns the pipe)
 #TODO go through the code and find anything to improve
-
 
 
 p = Pipe(APP_NAME, VERSION, argv[1:])
