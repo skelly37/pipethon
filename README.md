@@ -28,5 +28,4 @@
   
 
 ## TODO
-- pipes work for Windows and Windows requirements are added here
 - Pipe class is added to Picard patch
