@@ -64,9 +64,9 @@ class Pipe:
 		pipe = win32pipe.CreateNamedPipe(
 			self.path,
 			win32pipe.PIPE_ACCESS_DUPLEX,
-			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
+			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_WAIT,
 			1, 65536, 65536,
-			0,
+			300,
 			None)
 		try:
 			win32pipe.ConnectNamedPipe(pipe, None)
@@ -101,7 +101,7 @@ class Pipe:
 
 	def read_from_pipe(self, timeout_secs: float = 1.5) -> str:
 		if self.__platform == "windows":
-			return self.__read_from_win_pipe(timeout_secs)
+			return str(self.__read_from_win_pipe(timeout_secs))
 		else:
 			return self.__read_from_unix_pipe(timeout_secs)
 
@@ -131,7 +131,10 @@ class Pipe:
 
 
 		if len(response)>0:
-			return response
+			if response[0] == 0:
+				return response[1].decode("utf-8")
+			else:
+				raise ValueError(f"INVALID RESPONSE: {response[1].decode('utf-8')}")
 		else:
 			return Pipe.NO_RESPONSE_MESSAGE
 
@@ -174,11 +177,3 @@ class Pipe:
 			self.send_to_pipe("kill the reader\n")
 
 		return Pipe.NO_RESPONSE_MESSAGE
-
-"""
-Example usage:
-
-p = Pipe(APP_NAME, VERSION, argv[1:])
-print(p.is_pipe_owner)
-print(p.send_to_pipe("anything"))
-"""
