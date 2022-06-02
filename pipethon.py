@@ -1,3 +1,5 @@
+# Developed by skelly37 under MIT License (2022)
+
 import os
 from sys import argv, platform as PLATFORM
 import concurrent.futures
