@@ -1,17 +1,15 @@
 # Developed by skelly37 under MIT License (2022)
 
-import os
-from sys import argv, platform as PLATFORM
 import concurrent.futures
+import os
+from sys import platform as PLATFORM
+
 
 if PLATFORM == "win32" or PLATFORM == "cygwin":
 	import win32pipe, win32file
 	from pywintypes import error as WinApiError
 	PLATFORM = "windows"
 
-#sample values to be replaced
-APP_NAME: str = "Pipethon"
-VERSION: str = "1-0-0"
 
 class Pipe:
 	NO_RESPONSE_MESSAGE = "No response from FIFO"
