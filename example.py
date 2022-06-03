@@ -1,8 +1,10 @@
-from pipethon import Pipe
 import concurrent.futures
 
+from pipethon import Pipe
+
 ARGS = ["test", "test2", "test3", "quit"]
-RESPONSES = []
+RESPONSES = []  # type: ignore
+
 
 class Reader:
     def __init__(self, pipe):
@@ -10,7 +12,7 @@ class Reader:
 
     def read(self):
         response = ""
-        while len(response)==0:
+        while len(response) == 0:
             response = self.pipe.read_from_pipe()
             print(RESPONSES)
             if response != "quit":
@@ -18,12 +20,13 @@ class Reader:
                 return True
             return False
 
+
 class Writer:
     def __init__(self, pipe):
         self.pipe = pipe
 
     def write(self):
-        if len(ARGS)>0:
+        if len(ARGS) > 0:
             if self.pipe.send_to_pipe(ARGS[0]):
                 del ARGS[0]
                 return True
