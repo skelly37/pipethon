@@ -4,7 +4,6 @@ import concurrent.futures
 ARGS = ["test", "test2", "test3", "quit"]
 RESPONSES = []
 
-
 class Reader:
     def __init__(self, pipe):
         self.pipe = pipe
@@ -31,7 +30,8 @@ class Writer:
         return False
 
 
-pipe = Pipe(app_name="test", app_version="1-0-0", args=ARGS)
+pipe = Pipe(app_name="test", app_version="1-0-0", args=[])
+print(pipe.is_pipe_owner)
 
 if pipe.is_pipe_owner:
     writer = Writer(pipe)
