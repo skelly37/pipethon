@@ -1,4 +1,4 @@
-# Developed by skelly37 under MIT License (2022)
+# developed by skelly37 under MIT license, 2022
 
 import concurrent.futures
 import os
@@ -6,9 +6,9 @@ from sys import platform as PLATFORM
 
 
 if PLATFORM == "win32" or PLATFORM == "cygwin":
-    import win32pipe
-    import win32file
-    from pywintypes import error as WinApiError
+    import win32pipe # type: ignore
+    import win32file # type: ignore
+    from pywintypes import error as WinApiError # type: ignore
 
     PLATFORM = "windows"
 
@@ -111,7 +111,7 @@ class Pipe:
             return self.__read_from_unix_pipe(timeout_secs)
 
     def __win_reader(self) -> str:
-        response: str = ""
+        response = ""  # type: ignore
 
         try:
             pipe = win32file.CreateFile(
@@ -136,9 +136,9 @@ class Pipe:
 
         if len(response) > 0:
             if response[0] == 0:
-                return response[1].decode("utf-8")
+                return response[1].decode("utf-8")  # type: ignore
             else:
-                raise ValueError(f"INVALID RESPONSE: {response[1].decode('utf-8')}")
+                raise ValueError(f"INVALID RESPONSE: {response[1].decode('utf-8')}")  # type: ignore
         else:
             return Pipe.NO_RESPONSE_MESSAGE
 
