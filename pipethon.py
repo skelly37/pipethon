@@ -14,9 +14,9 @@ if PLATFORM == "win32" or PLATFORM == "cygwin":
 
 
 class Pipe:
-    NO_RESPONSE_MESSAGE = "No response from FIFO"
-    NOT_FOUND_MESSAGE = "FIFO doesn't exist"
-    TEST_MESSAGE_TO_IGNORE = "Ignore this message, just testing the pipe"
+    NO_RESPONSE_MESSAGE: str = "No response from FIFO"
+    NOT_FOUND_MESSAGE: str = "FIFO doesn't exist"
+    TEST_MESSAGE_TO_IGNORE: str = "Ignore this message, just testing the pipe"
 
     def __init__(self, app_name: str, app_version: str, args=[]):
         self.__app_name: str = app_name
@@ -27,9 +27,12 @@ class Pipe:
 
         self.is_pipe_owner: bool = False
 
-        #test if pipe is listened to even if no args provided
-        if len(args) == 0:
-            args.append(self.TEST_MESSAGE_TO_IGNORE)
+        # test if pipe is listened to even if no args provided
+        if type(args) == list:
+            if len(args) == 0:
+                args.append(self.TEST_MESSAGE_TO_IGNORE)
+        else:
+            raise ValueError("args argument MUST be a list")
 
         if self.__platform == "windows":
             for arg in args:
@@ -145,7 +148,7 @@ class Pipe:
 
         try:
             if reader.result(timeout=timeout_secs):
-                res = reader.result()
+                res: str = reader.result()
                 if res != self.TEST_MESSAGE_TO_IGNORE:
                     return res
         except concurrent.futures._base.TimeoutError:
@@ -174,7 +177,7 @@ class Pipe:
 
         try:
             if reader.result(timeout=timeout_secs):
-                res = reader.result()
+                res: str = reader.result()
                 if res != self.TEST_MESSAGE_TO_IGNORE:
                     return res
         except concurrent.futures._base.TimeoutError:
