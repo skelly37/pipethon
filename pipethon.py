@@ -4,11 +4,10 @@ import concurrent.futures
 import os
 from sys import platform as PLATFORM
 
-
 if PLATFORM == "win32" or PLATFORM == "cygwin":
-    import win32pipe # type: ignore
-    import win32file # type: ignore
-    from pywintypes import error as WinApiError # type: ignore
+    import win32pipe  # type: ignore
+    import win32file  # type: ignore
+    from pywintypes import error as WinApiError  # type: ignore
 
     PLATFORM = "windows"
 
