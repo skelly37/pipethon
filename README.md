@@ -27,5 +27,5 @@
       - returns string: if it has read something, it returns the data received, otherwise `Pipe.NO_RESPONSE_MESSAGE`
   
 
-## TODO
-- Pipe class is added to Picard patch
+## Purpose
+The pipethon named pipes protocol was developed as the first stage of my [Google Summer of Code 2022 project](https://summerofcode.withgoogle.com/programs/2022/projects/ItQ0NNLd) for [(MusicBrainz Picard)](https://github.com/metabrainz/picard). 
