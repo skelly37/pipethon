@@ -14,7 +14,7 @@
   - constructor args: 
     - `app_name`: string — used to generate FIFO name
     - `app_version`: string — used to generate FIFO name
-    - `args`: list – `args` are passed to the process that listens to the pipe (if such one exists)
+    - `args`: list, optional – `args` are passed to the process that listens to the pipe (if such one exists)
   - public parameters:
     - `path`: string — path of the FIFO
     - `is_pipe_owner`: bool — if `True`, there was no response from the FIFO reader, so the class assume it doesn't exist
