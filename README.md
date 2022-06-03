@@ -10,6 +10,7 @@
   - static variables:
     - `NO_RESPONSE_MESSAGE = "No response from FIFO"`: string — returned when `Pipe.read_from_pipe()` doesn't read anything from FIFO
     - `NOT_FOUND_MESSAGE = "FIFO doesn't exist"`: string — used with `raise FileNotFoundError`
+    - `TEST_MESSAGE_TO_IGNORE = "Ignore this message, just testing the pipe"` : string — sent to pipe if args is left empty, just to check whether the handler owns the pipe or not.
   - constructor args: 
     - `app_name`: string — used to generate FIFO name
     - `app_version`: string — used to generate FIFO name
