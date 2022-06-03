@@ -26,7 +26,26 @@
     - `read_from_pipe(self, timeout_secs = 1.5)` 
       - `timeout_secs`: float (optional) — how many seconds should the sender wait before failing. 1.5 by default
       - returns string: if it has read something, it returns the data received, otherwise `Pipe.NO_RESPONSE_MESSAGE`
-  
+
 
 ## Purpose
 The pipethon named pipes protocol was developed as the first stage of my [Google Summer of Code 2022 project](https://summerofcode.withgoogle.com/programs/2022/projects/ItQ0NNLd) for [(MusicBrainz Picard)](https://github.com/metabrainz/picard). 
+
+
+## Dev info
+### Requirements:
+  - `pip install flake8`
+  - `pip install isort==4.3.10`
+### My pre-commit hook
+```
+#!/usr/bin/bash
+
+PYFILES=$(git diff --cached --name-only | grep "\\.py$")
+
+if [ ! -z "$PYFILES" ]; then
+  set -e
+  isort --check-only --diff --quiet $PYFILES
+  flake8 $PYFILES
+  mypy $PYFILES
+fi
+```
