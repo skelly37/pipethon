@@ -16,7 +16,7 @@ if PLATFORM == "win32" or PLATFORM == "cygwin":
 class Pipe:
     NO_RESPONSE_MESSAGE: str = "No response from FIFO"
     NOT_FOUND_MESSAGE: str = "FIFO doesn't exist"
-    TEST_MESSAGE_TO_IGNORE: str = "Ignore this message, just testing the pipe"
+    MESSAGE_TO_IGNORE: str = "Ignore this message, just testing the pipe"
 
     def __init__(self, app_name: str, app_version: str, args=[]):
         self.__app_name: str = app_name
@@ -30,7 +30,7 @@ class Pipe:
         # test if pipe is listened to even if no args provided
         if type(args) == list:
             if len(args) == 0:
-                args.append(self.TEST_MESSAGE_TO_IGNORE)
+                args.append(self.MESSAGE_TO_IGNORE)
         else:
             raise ValueError("args argument MUST be a list")
 
@@ -149,11 +149,11 @@ class Pipe:
         try:
             if reader.result(timeout=timeout_secs):
                 res: str = reader.result()
-                if res != self.TEST_MESSAGE_TO_IGNORE:
+                if res != self.MESSAGE_TO_IGNORE:
                     return res
         except concurrent.futures._base.TimeoutError:
             # hacky way to kill the file-opening loop
-            self.send_to_pipe("kill the reader\n")
+            self.send_to_pipe(self.MESSAGE_TO_IGNORE)
 
         return Pipe.NO_RESPONSE_MESSAGE
 
@@ -178,10 +178,10 @@ class Pipe:
         try:
             if reader.result(timeout=timeout_secs):
                 res: str = reader.result()
-                if res != self.TEST_MESSAGE_TO_IGNORE:
+                if res != self.MESSAGE_TO_IGNORE:
                     return res
         except concurrent.futures._base.TimeoutError:
             # hacky way to kill the file-opening loop
-            self.send_to_pipe("kill the reader\n")
+            self.send_to_pipe(self.MESSAGE_TO_IGNORE)
 
         return Pipe.NO_RESPONSE_MESSAGE
