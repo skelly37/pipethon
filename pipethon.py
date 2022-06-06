@@ -2,14 +2,15 @@
 
 import concurrent.futures
 import os
-from sys import platform as PLATFORM
+from sys import platform
 
-if PLATFORM == "win32" or PLATFORM == "cygwin":
+IS_WIN = False
+
+if platform == "win32" or platform== "cygwin":
     import win32pipe  # type: ignore
     import win32file  # type: ignore
     from pywintypes import error as WinApiError  # type: ignore
-
-    PLATFORM = "windows"
+    IS_WIN = True
 
 
 class Pipe:
@@ -17,10 +18,31 @@ class Pipe:
     NOT_FOUND_MESSAGE: str = "FIFO doesn't exist"
     MESSAGE_TO_IGNORE: str = "Ignore this message, just testing the pipe"
 
-    def __init__(self, app_name: str, app_version: str, args=[]):
+    def __init__(self, app_name: str, app_version: str, args=None):
+        if args is None:
+            args = []
+
         self.__app_name: str = app_name
         self.__app_version: str = app_version
-        self.__platform: str = PLATFORM
+        self.__is_win: bool = IS_WIN
+
+        # named pipe values needed by windows API
+        if self.__is_win:
+            # win32pipe.CreateNamedPipe
+            # more about the arguments: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createnamedpipea
+            self.__MAX_INSTANCES = 1
+            self.__OUT_BUFFER_SIZE = 65536
+            self.__IN_BUFFER_SIZE = 65536
+            # timeout doesn't really matter, concurrent.futures ensures that connections are closed in declared time
+            # the value is in milliseconds
+            self.__DEFAULT_TIMEOUT = 300
+
+
+            # win32file.CreateFile
+            # more about the arguments: http://timgolden.me.uk/pywin32-docs/win32file__CreateFile_meth.html
+            self.__SHARE_MODE = 0
+            self.__FLAGS_AND_ATTRIBUTES = 0
+
 
         self.path: str = self.__generate_filename()
 
@@ -33,7 +55,7 @@ class Pipe:
         else:
             raise ValueError("args argument MUST be a list")
 
-        if self.__platform == "windows":
+        if self.__is_win:
             for arg in args:
                 if not self.send_to_pipe(arg):
                     self.is_pipe_owner = True
@@ -54,7 +76,7 @@ class Pipe:
     def __generate_filename(self) -> str:
         prefix: str = ""
         username: str = os.getlogin()
-        if self.__platform == "windows":
+        if self.__is_win:
             prefix = "\\\\.\\pipe\\"
         else:
             prefix = "/tmp/"
@@ -70,8 +92,10 @@ class Pipe:
             self.path,
             win32pipe.PIPE_ACCESS_DUPLEX,
             win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_WAIT,
-            1, 65536, 65536,
-            300,
+            self.__MAX_INSTANCES,
+            self.__OUT_BUFFER_SIZE,
+            self.__IN_BUFFER_SIZE,
+            self.__DEFAULT_TIMEOUT,
             None)
         try:
             win32pipe.ConnectNamedPipe(pipe, None)
@@ -89,7 +113,7 @@ class Pipe:
     def send_to_pipe(self, message: str, timeout_secs: float = 1.5) -> bool:
         __pool = concurrent.futures.ThreadPoolExecutor()
         sender = None
-        if self.__platform == "windows":
+        if self.__is_win:
             sender = __pool.submit(self.__win_sender, message)
         else:
             sender = __pool.submit(self.__unix_sender, message)
@@ -104,7 +128,7 @@ class Pipe:
         return False
 
     def read_from_pipe(self, timeout_secs: float = 1.5) -> str:
-        if self.__platform == "windows":
+        if self.__is_win:
             return str(self.__read_from_win_pipe(timeout_secs))
         else:
             return self.__read_from_unix_pipe(timeout_secs)
@@ -116,13 +140,13 @@ class Pipe:
             pipe = win32file.CreateFile(
                 self.path,
                 win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-                0,
+                self.__SHARE_MODE,
                 None,
                 win32file.OPEN_EXISTING,
-                0,
+                self.__FLAGS_AND_ATTRIBUTES,
                 None
             )
-            while len(response) == 0:
+            while not response:
                 response = win32file.ReadFile(pipe, 64 * 1024)
 
         except WinApiError as err:
@@ -133,7 +157,7 @@ class Pipe:
             else:
                 raise FileNotFoundError(f"{err.args[0]}; {err.args[1]}; {err.args[2]}")
 
-        if len(response) > 0:
+        if response:
             if response[0] == 0:
                 return response[1].decode("utf-8")  # type: ignore
             else:
@@ -158,14 +182,14 @@ class Pipe:
 
     def __unix_reader(self) -> str:
         response: str = ""
-        while len(response) == 0:
+        while not response:
             try:
                 fifo = open(self.path, 'r')
                 response = fifo.read().strip()
             except FileNotFoundError:
                 raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
 
-        if len(response) > 0:
+        if response:
             return response
         else:
             return Pipe.NO_RESPONSE_MESSAGE
