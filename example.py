@@ -33,7 +33,7 @@ class Writer:
         return False
 
 
-pipe = Pipe(app_name="test", app_version="1-0-0", args=[])
+pipe = Pipe(app_name="test", app_version="1.0-0", args=[])
 print(pipe.is_pipe_owner)
 
 if pipe.is_pipe_owner:

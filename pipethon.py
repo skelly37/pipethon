@@ -3,20 +3,22 @@
 import concurrent.futures
 import os
 from sys import platform
+from typing import Optional
 
-IS_WIN: bool = False
+IS_WIN: bool = platform == "win32"
+IS_MACOS: bool = platform == "darwin"
 
-if platform == "win32" or platform == "cygwin":
+if IS_WIN:
     import win32pipe  # type: ignore
     import win32file  # type: ignore
     from pywintypes import error as WinApiError  # type: ignore
-    IS_WIN = True
 
 
 class Pipe:
     NO_RESPONSE_MESSAGE: str = "No response from FIFO"
     NOT_FOUND_MESSAGE: str = "FIFO doesn't exist"
     MESSAGE_TO_IGNORE: str = "Ignore this message, just testing the pipe"
+    TIMEOUT_SECS: float = 1.5
 
     def __init__(self, app_name: str, app_version: str, args=None):
         if args is None:
@@ -24,6 +26,7 @@ class Pipe:
 
         self.__app_name: str = app_name
         self.__app_version: str = app_version
+        self.__is_mac: bool = IS_MACOS
         self.__is_win: bool = IS_WIN
 
         # named pipe values needed by windows API
@@ -45,12 +48,13 @@ class Pipe:
 
             # pywintypes.error error codes
             # more about the error codes: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/18d8fbe8-a967-4f1c-ae50-99ca8e491d2d
-            self.__FILE_NOT_FOUND_ERROR_CODE = 2
-            self.__BROKEN_PIPE_ERROR_CODE = 109
+            self.__FILE_NOT_FOUND_ERROR_CODE: int = 2
+            self.__BROKEN_PIPE_ERROR_CODE: int = 109
 
         self.path: str = self.__generate_filename()
 
         self.is_pipe_owner: bool = False
+        self.permission_error_happened: bool = False
 
         # test if pipe is listened to even if no args provided
         if isinstance(args, list):
@@ -74,14 +78,17 @@ class Pipe:
                         break
 
     def __generate_filename(self) -> str:
-        prefix: str = ""
-        username: str = os.getlogin()
         if self.__is_win:
             prefix = "\\\\.\\pipe\\"
+        elif self.__is_mac:
+            prefix = os.path.expanduser("~/Library/Application Support/MusicBrainz/Picard/pipes/")
         else:
-            prefix = "/tmp/"
+            prefix = f"{os.getenv('XDG_RUNTIME_DIR')}/"
+            # just in case the $XDG_RUNTIME_DIR is not declared, fallback dir
+            if not prefix:
+                prefix = os.path.expanduser("~/.config/MusicBrainz/Picard/pipes/")
 
-        return f"{prefix}{self.__app_name}_v{self.__app_version}_{username}_pipe_file"
+        return f"{prefix}{self.__app_name}_v{self.__app_version}_pipe_file"
 
     def __create_unix_pipe(self) -> None:
         try:
@@ -90,9 +97,23 @@ class Pipe:
                 os.unlink(self.path)
             except FileNotFoundError:
                 pass
-            os.mkfifo(self.path)
+            try:
+                os.mkfifo(self.path)
+            # no parent dirs detected, need to create them
+            except FileNotFoundError:
+                dirs = self.path.split("/")
+                # we have to remove pipe name while creating dirs not to make it a dir
+                # also, the first index is "", because we're on *nix
+                dirs.pop(-1)
+                dirs.pop(0)
+                path = "/"
+                for d in dirs:
+                    path += d
+                    if not os.path.exists(path):
+                        os.mkdir(path)
+                os.mkfifo(self.path)
         except PermissionError:
-            raise PermissionError(f"Couldn't create a pipe: {self.path}\nCheck the permissions and try again.")
+            self.permission_error_happened = True
         self.is_pipe_owner = True
 
     def __win_sender(self, message: str) -> bool:
@@ -118,8 +139,12 @@ class Pipe:
             fifo.write(message)
         return True
 
-    def send_to_pipe(self, message: str, timeout_secs: float = 1.5) -> bool:
+    def send_to_pipe(self, message: str, timeout_secs: Optional[float] = None) -> bool:
+        if timeout_secs is None:
+            timeout_secs = self.TIMEOUT_SECS
+
         __pool = concurrent.futures.ThreadPoolExecutor()
+
         if self.__is_win:
             sender = __pool.submit(self.__win_sender, message)
         else:
@@ -134,7 +159,10 @@ class Pipe:
 
         return False
 
-    def read_from_pipe(self, timeout_secs: float = 1.5) -> str:
+    def read_from_pipe(self, timeout_secs: Optional[float] = None) -> str:
+        if timeout_secs is None:
+            timeout_secs = self.TIMEOUT_SECS
+
         __pool = concurrent.futures.ThreadPoolExecutor()
 
         if self.__is_win:
@@ -170,13 +198,14 @@ class Pipe:
                 response = win32file.ReadFile(pipe, self.__BUFFER_SIZE)
 
         except WinApiError as err:
-            if err.args[0] == self.__FILE_NOT_FOUND_ERROR_CODE:
+            if err.winerror == self.__FILE_NOT_FOUND_ERROR_CODE:
                 raise FileNotFoundError(Pipe.NOT_FOUND_MESSAGE)
-            elif err.args[0] == self.__BROKEN_PIPE_ERROR_CODE:
+            elif err.winerror == self.__BROKEN_PIPE_ERROR_CODE:
                 raise FileNotFoundError("Pipe is broken")
             else:
-                raise FileNotFoundError(f"{err.args[0]}; {err.args[1]}; {err.args[2]}")
+                raise FileNotFoundError(f"{err.winerror}; {err.funcname}; {err.strerror}")
 
+        # response[0] stores an exit code while response[1] an actual response
         if response:
             if response[0] == 0:
                 return str(response[1].decode("utf-8"))  # type: ignore
