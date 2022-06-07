@@ -81,12 +81,12 @@ class Pipe:
         if self.__is_win:
             prefix = "\\\\.\\pipe\\"
         elif self.__is_mac:
-            prefix = os.path.expanduser("~/Library/Application Support/MusicBrainz/Picard/pipes/")
+            prefix = os.path.expanduser("~/Library/Application Support/{self.__app_name}/pipes/")
         else:
             prefix = f"{os.getenv('XDG_RUNTIME_DIR')}/"
             # just in case the $XDG_RUNTIME_DIR is not declared, fallback dir
             if not prefix:
-                prefix = os.path.expanduser("~/.config/MusicBrainz/Picard/pipes/")
+                prefix = os.path.expanduser("~/.config/{self.__app_name}/pipes/")
 
         return f"{prefix}{self.__app_name}_v{self.__app_version}_pipe_file"
 
@@ -101,16 +101,7 @@ class Pipe:
                 os.mkfifo(self.path)
             # no parent dirs detected, need to create them
             except FileNotFoundError:
-                dirs = self.path.split("/")
-                # we have to remove pipe name while creating dirs not to make it a dir
-                # also, the first index is "", because we're on *nix
-                dirs.pop(-1)
-                dirs.pop(0)
-                path = "/"
-                for d in dirs:
-                    path += d + "/"
-                    if not os.path.exists(path):
-                        os.mkdir(path)
+                os.makedirs(self.path)
                 os.mkfifo(self.path)
         except PermissionError:
             self.permission_error_happened = True
