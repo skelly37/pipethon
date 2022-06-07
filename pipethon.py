@@ -28,6 +28,8 @@ class Pipe:
 
         # named pipe values needed by windows API
         if self.__is_win:
+            self.__app_version = self.__app_version.replace(".", "-")
+
             # win32pipe.CreateNamedPipe
             # more about the arguments: https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createnamedpipea
             self.__MAX_INSTANCES: int = 1
@@ -52,7 +54,7 @@ class Pipe:
 
         # test if pipe is listened to even if no args provided
         if isinstance(args, list):
-            if len(args) == 0:
+            if not args:
                 args.append(self.MESSAGE_TO_IGNORE)
         else:
             raise ValueError("args argument MUST be a list")
@@ -90,7 +92,7 @@ class Pipe:
                 pass
             os.mkfifo(self.path)
         except PermissionError:
-            raise ValueError(f"Couldn't create a pipe: {self.path}\nCheck the permissions and try again.")
+            raise PermissionError(f"Couldn't create a pipe: {self.path}\nCheck the permissions and try again.")
         self.is_pipe_owner = True
 
     def __win_sender(self, message: str) -> bool:
